@@ -186,6 +186,111 @@ describe('ModelDiscovery Plugin', () => {
       }))
     })
 
+    it('should enrich LiteLLM models from model info and filter non-chat modes', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: [
+              { id: 'openai/gpt-5.5', object: 'model', created: 1234567890, owned_by: 'openai' },
+              { id: 'text-embedding-3-small', object: 'model', created: 1234567890, owned_by: 'openai' },
+              { id: 'dall-e-3', object: 'model', created: 1234567890, owned_by: 'openai' }
+            ]
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: [
+              {
+                model_name: 'openai/gpt-5.5',
+                litellm_params: { model: 'ollama/openai/gpt-5.5' },
+                model_info: {
+                  key: 'openai/gpt-5.5',
+                  mode: 'chat'
+                }
+              },
+              {
+                model_name: 'openai/gpt-5.5',
+                litellm_params: { model: 'openai/gpt-5.5' },
+                model_info: {
+                  key: 'gpt-5.5',
+                  mode: 'chat',
+                  max_tokens: 128000,
+                  max_input_tokens: 1050000,
+                  max_output_tokens: 128000,
+                  supports_reasoning: true,
+                  supports_none_reasoning_effort: true,
+                  supports_minimal_reasoning_effort: false,
+                  supports_xhigh_reasoning_effort: true,
+                  supported_openai_params: ['reasoning_effort']
+                }
+              },
+              {
+                model_name: 'TEXT-EMBEDDING-3-SMALL',
+                litellm_params: { model: 'openai/TEXT-EMBEDDING-3-SMALL' },
+                model_info: {
+                  mode: 'embedding',
+                  max_input_tokens: 8191
+                }
+              },
+              {
+                model_name: 'dall-e-3',
+                litellm_params: { model: 'openai/dall-e-3' },
+                model_info: {
+                  mode: 'image_generation'
+                }
+              }
+            ]
+          })
+        })
+
+      const config: any = {
+        provider: {
+          litellm: {
+            npm: '@ai-sdk/openai-compatible',
+            name: 'LiteLLM',
+            options: {
+              baseURL: 'http://127.0.0.1:4000/v1',
+              modelsDiscovery: {
+                modelInfoEndpoint: '/v1/model/info',
+                filterNonChat: true
+              }
+            },
+            models: {}
+          }
+        }
+      }
+
+      await pluginHooks.config(config)
+
+      expect(mockFetch).toHaveBeenCalledTimes(2)
+      expect(mockFetch).toHaveBeenNthCalledWith(1, 'http://127.0.0.1:4000/v1/models', expect.objectContaining({
+        method: 'GET'
+      }))
+      expect(mockFetch).toHaveBeenNthCalledWith(2, 'http://127.0.0.1:4000/v1/model/info', expect.objectContaining({
+        method: 'GET'
+      }))
+      expect(config.provider.litellm.models['openai/gpt-5.5']).toEqual(expect.objectContaining({
+        id: 'openai/gpt-5.5',
+        reasoning: true,
+        limit: {
+          context: 1050000,
+          input: 1050000,
+          output: 128000
+        },
+        variants: {
+          none: { reasoningEffort: 'none' },
+          low: { reasoningEffort: 'low' },
+          medium: { reasoningEffort: 'medium' },
+          high: { reasoningEffort: 'high' },
+          xhigh: { reasoningEffort: 'xhigh' }
+        }
+      }))
+      expect(config.provider.litellm.models['text-embedding-3-small']).toBeUndefined()
+      expect(config.provider.litellm.models['dall-e-3']).toBeUndefined()
+    })
+
     it('should merge discovered models with existing config', async () => {
       mockFetch.mockResolvedValue({
         ok: true,

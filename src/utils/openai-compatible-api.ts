@@ -1,10 +1,15 @@
-import type { OpenAIModel, OpenAIModelsResponse } from '../types'
+import type { LiteLLMModelInfoEntry, LiteLLMModelInfoResponse, OpenAIModel, OpenAIModelsResponse } from '../types'
 
 const OPENAI_COMPATIBLE_MODELS_ENDPOINT = "/v1/models"
 
 export interface ModelsDiscoveryResult {
   ok: boolean
   models: OpenAIModel[]
+}
+
+export interface ModelInfoDiscoveryResult {
+  ok: boolean
+  entries: LiteLLMModelInfoEntry[]
 }
 
 export function normalizeBaseURL(baseURL: string): string {
@@ -50,6 +55,39 @@ export async function discoverModelsFromProvider(
     }
   } catch {
     return { ok: false, models: [] }
+  }
+}
+
+export async function discoverModelInfoFromProvider(
+  baseURL: string,
+  apiKey?: string,
+  endpoint: string = "/v1/model/info"
+): Promise<ModelInfoDiscoveryResult> {
+  try {
+    const url = buildAPIURL(baseURL, endpoint)
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    }
+    if (apiKey) {
+      headers["Authorization"] = `Bearer ${apiKey}`
+    }
+    const response = await fetch(url, {
+      method: "GET",
+      headers,
+      signal: AbortSignal.timeout(3000),
+    })
+
+    if (!response.ok) {
+      return { ok: false, entries: [] }
+    }
+
+    const data = (await response.json()) as LiteLLMModelInfoResponse
+    return {
+      ok: true,
+      entries: data.data ?? [],
+    }
+  } catch {
+    return { ok: false, entries: [] }
   }
 }
 
