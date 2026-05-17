@@ -191,7 +191,6 @@ export async function enhanceConfig(
       const existingModels = p.models || {}
       const discoveredModels: Record<string, any> = {}
       let chatModelsCount = 0
-      let embeddingModelsCount = 0
 
       const hasProviderModelRegexFilter = !!providerDiscoveryConfig.models?.includeRegex?.length || !!providerDiscoveryConfig.models?.excludeRegex?.length
       const providerModelRegexFilter = getProviderModelRegexFilter(providerDiscoveryConfig, logger.child({ category: 'filtering' }))
@@ -214,6 +213,10 @@ export async function enhanceConfig(
           }
 
           const modelType = categorizeModel(model.id)
+          if (modelType === 'embedding') {
+            continue
+          }
+
           const owner = extractModelOwner(model.id)
           const modelConfig: any = {
             id: model.id,
@@ -224,13 +227,7 @@ export async function enhanceConfig(
             modelConfig.organizationOwner = owner
           }
 
-          if (modelType === 'embedding') {
-            embeddingModelsCount++
-            modelConfig.modalities = {
-              input: ["text"],
-              output: ["embedding"]
-            }
-          } else if (modelType === 'chat') {
+          if (modelType === 'chat') {
             chatModelsCount++
             modelConfig.modalities = {
               input: ["text", "image"],
@@ -255,10 +252,6 @@ export async function enhanceConfig(
           baseURL,
           models: discoveredModels
         })
-
-        if (chatModelsCount === 0 && embeddingModelsCount > 0) {
-          // Provider only has embedding models
-        }
       }
     }
 

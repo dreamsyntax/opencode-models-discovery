@@ -294,6 +294,45 @@ describe('ModelDiscovery Plugin', () => {
       expect(config.provider.litellm.models['dall-e-3']).toBeUndefined()
     })
 
+    it('should skip embedding models even when model info is missing', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            data: [
+              { id: 'Qwen/Qwen3-VL-Embedding-8B', object: 'model', created: 1234567890, owned_by: 'openai' },
+              { id: 'Qwen/Qwen3-VL-32B-Instruct', object: 'model', created: 1234567890, owned_by: 'openai' }
+            ]
+          })
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({ data: [] })
+        })
+
+      const config: any = {
+        provider: {
+          litellm: {
+            npm: '@ai-sdk/openai-compatible',
+            name: 'LiteLLM',
+            options: { baseURL: 'http://127.0.0.1:4000/v1' },
+            models: {}
+          }
+        }
+      }
+
+      await pluginHooks.config(config)
+
+      expect(config.provider.litellm.models['Qwen/Qwen3-VL-Embedding-8B']).toBeUndefined()
+      expect(config.provider.litellm.models['Qwen/Qwen3-VL-32B-Instruct']).toEqual(expect.objectContaining({
+        id: 'Qwen/Qwen3-VL-32B-Instruct',
+        modalities: {
+          input: ['text', 'image'],
+          output: ['text']
+        }
+      }))
+    })
+
     it('should merge discovered models with existing config', async () => {
       mockFetch.mockResolvedValue({
         ok: true,
