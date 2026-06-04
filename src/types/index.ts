@@ -1,8 +1,29 @@
+export interface ModelCapabilities {
+  reasoning?: boolean
+  vision?: boolean
+  tool_call?: boolean
+}
+
+export interface ModelPricing {
+  input?: number
+  output?: number
+  cache_read?: number
+  cache_write?: number
+  unit?: string
+  currency?: string
+}
+
 export interface OpenAIModel {
   id: string
   object: string
   created: number
   owned_by: string
+  name?: string
+  type?: string
+  capabilities?: ModelCapabilities
+  context_length?: number
+  max_output_tokens?: number
+  pricing?: ModelPricing
 }
 
 export interface OpenAIModelsResponse {

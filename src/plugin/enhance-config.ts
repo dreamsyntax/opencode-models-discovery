@@ -123,10 +123,11 @@ export async function enhanceConfig(
             continue
           }
 
-          const owner = extractModelOwner(model.id)
+          const owner = model.owned_by || extractModelOwner(model.id)
+          const modelName = model.name || (smartModelNameEnabled ? formatModelName(model) : model.id)
           const modelConfig: any = {
             id: model.id,
-            name: smartModelNameEnabled ? formatModelName(model) : model.id,
+            name: modelName,
           }
 
           if (owner) {
@@ -136,9 +137,47 @@ export async function enhanceConfig(
           if (modelType === 'chat') {
             chatModelsCount++
             modelConfig.modalities = {
-              input: ["text", "image"],
+              input: model.capabilities?.vision === true ? ["text", "image"] : ["text"],
               output: ["text"]
             }
+            modelConfig.attachment = model.capabilities?.vision === true
+            modelConfig.temperature = true
+          }
+
+          if (model.capabilities?.reasoning === true) {
+            modelConfig.reasoning = true
+          }
+
+          if (model.capabilities?.tool_call === true) {
+            modelConfig.tool_call = true
+          }
+
+          if (typeof model.context_length === 'number' && model.context_length > 0) {
+            modelConfig.limit = {
+              context: model.context_length,
+              input: model.context_length,
+              output: typeof model.max_output_tokens === 'number' && model.max_output_tokens > 0
+                ? model.max_output_tokens
+                : model.context_length,
+            }
+          }
+
+          if (model.pricing && (model.pricing.input || model.pricing.output)) {
+            modelConfig.cost = {
+              input: model.pricing.input ?? 0,
+              output: model.pricing.output ?? 0,
+            }
+            if (model.pricing.cache_read != null) {
+              modelConfig.cost.cache_read = model.pricing.cache_read
+            }
+            if (model.pricing.cache_write != null) {
+              modelConfig.cost.cache_write = model.pricing.cache_write
+            }
+          }
+
+          if (model.created && model.created > 1609459200) {
+            const date = new Date(model.created * 1000)
+            modelConfig.release_date = date.toISOString().split('T')[0]
           }
 
           modelInfoEnricher?.applyModelInfo(modelConfig, model.id)
