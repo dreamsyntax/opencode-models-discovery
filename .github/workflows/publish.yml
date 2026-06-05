@@ -9,7 +9,38 @@ on:
       - package.json
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Test
+        run: bun run test:run
+
+      - name: Pack
+        run: npm pack
+
+      - name: Upload package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-models-discovery-${{ github.sha }}
+          path: "*.tgz"
+          retention-days: 30
+
   publish:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
