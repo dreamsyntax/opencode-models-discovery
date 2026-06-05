@@ -297,7 +297,7 @@ describe('ModelDiscovery Plugin', () => {
         json: async () => ({
           data: [
             { id: 'Qwen/Qwen3-VL-Embedding-8B', object: 'model', created: 1234567890, owned_by: 'openai' },
-            { id: 'Qwen/Qwen3-VL-32B-Instruct', object: 'model', created: 1234567890, owned_by: 'openai' }
+            { id: 'Qwen/Qwen3-VL-32B-Instruct', object: 'model', created: 1234567890, owned_by: 'openai', capabilities: { vision: true } }
           ]
         })
       })
