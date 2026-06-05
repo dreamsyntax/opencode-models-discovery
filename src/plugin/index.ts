@@ -8,6 +8,7 @@ import { parsePluginConfig, type PluginConfig } from '../types/plugin-config'
 
 export const ModelDiscoveryPlugin: Plugin = async (input: PluginInput, options?: PluginOptions) => {
   const { client } = input
+  const directory = input.directory || process.cwd()
   const logger = createPluginLogger(client, { category: 'plugin' })
 
   if (!client || typeof client !== 'object') {
@@ -30,7 +31,7 @@ export const ModelDiscoveryPlugin: Plugin = async (input: PluginInput, options?:
   const toastNotifier = new ToastNotifier(client)
 
   return {
-    config: createConfigHook(client, toastNotifier, pluginConfig, logger.child({ category: 'config' })),
+    config: createConfigHook(client, toastNotifier, pluginConfig, logger.child({ category: 'config' }), directory),
     event: createEventHook(logger.child({ category: 'event' })),
     "chat.params": createChatParamsHook(toastNotifier, pluginConfig),
   }

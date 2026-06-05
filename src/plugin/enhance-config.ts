@@ -20,7 +20,7 @@ export async function enhanceConfig(
   toastNotifier: ToastNotifier,
   pluginConfig: PluginConfig,
   logger: PluginLogger
-): Promise<void> {
+): Promise<DiscoveredProvider[]> {
   try {
     const providers = config.provider || {}
     const openAICompatibleProviders: DiscoveredProvider[] = []
@@ -218,10 +218,12 @@ export async function enhanceConfig(
       }
     }
 
+    return openAICompatibleProviders
   } catch (error) {
     logger.error('Unexpected error in enhanceConfig', {
       error: error instanceof Error ? error.message : String(error),
     })
     toastNotifier.warning("Plugin configuration failed", "Configuration Error").catch(() => { })
+    return []
   }
 }
